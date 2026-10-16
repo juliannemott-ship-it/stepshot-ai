@@ -1,0 +1,17 @@
+*{box-sizing:border-box}body{margin:0;font:18px/1.6 system-ui,sans-serif;background:#f7f5f0;color:#2b2d42}
+a{color:#3a6ea5}header,footer{background:#fff;padding:14px 20px;border-bottom:1px solid #e6e2d8}footer{border-top:1px solid #e6e2d8;font-size:15px;margin-top:40px}
+nav a{margin-right:16px;font-weight:600;text-decoration:none}.logo{font-weight:800;font-size:22px;color:#2b2d42;text-decoration:none;margin-right:24px}
+main{max-width:860px;margin:auto;padding:20px}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:16px}
+.card{background:#fff;border-radius:16px;padding:18px;border:1px solid #e6e2d8}.tag{display:inline-block;padding:2px 10px;border-radius:99px;font-size:14px;font-weight:600}
+.ready{background:#d8f3dc;color:#1b4332}.soon{background:#eee;color:#555}.hero{background:#e8f1fb;border-radius:20px;padding:28px;margin-bottom:24px}
+.step{background:#fff;border-radius:18px;margin:22px 0;border:1px solid #e6e2d8;overflow:hidden}.sh{display:flex;gap:14px;align-items:center;padding:16px 18px;font-size:21px;font-weight:700}
+.num{flex:none;width:46px;height:46px;border-radius:50%;color:#fff;display:grid;place-items:center;font-size:22px}
+.mock{margin:0 18px;border:3px dashed #c9c2b3;border-radius:14px;padding:14px;background:#fbfaf7;position:relative}
+.mock:before{content:"ILLUSTRATION — not a real screenshot";font-size:12px;letter-spacing:.05em;color:#8a8273;display:block;margin-bottom:8px}
+.bar{height:14px;border-radius:7px;background:#e3ded3;margin:6px 0}.btn{display:inline-block;padding:10px 18px;border-radius:12px;color:#fff;font-weight:700;box-shadow:0 0 0 5px #ffd16680}
+.input{border:2px solid #b9b2a3;border-radius:12px;padding:10px;background:#fff;color:#777}.hl{outline:5px solid #ffd166;outline-offset:3px}
+.see{margin:14px 18px 18px;padding:12px 16px;border-radius:12px;background:#d8f3dc;color:#1b4332}.see b:before{content:"✔ "}
+table{width:100%;border-collapse:collapse;background:#fff;border-radius:12px;overflow:hidden}td,th{padding:10px;border-bottom:1px solid #eee;text-align:left;vertical-align:top;font-size:16px}
+.note{background:#fff4d6;border-radius:12px;padding:12px 16px;font-size:16px}input[type=email]{font-size:18px;padding:12px;border-radius:12px;border:2px solid #b9b2a3;width:100%;max-width:340px}
+button{font-size:18px;padding:12px 20px;border-radius:12px;border:0;background:#3a6ea5;color:#fff;font-weight:700;margin-top:8px}
+.c0{background:#3a6ea5}.c1{background:#2a9d8f}.c2{background:#e76f51}.c3{background:#8e6bbf}.c4{background:#d4a017}
