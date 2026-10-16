@@ -97,3 +97,4 @@ w("scores.html",page("Scoring",f"""<h1>How we score</h1><table><tr><th>Measure</
 <p class=note>If we haven't tested something, we say “not yet scored” instead of guessing. Each card links its source and last-checked date.</p>"""))
 w("changes.html",page("What changed",f"""<h1>What changed</h1><p>Before/after picture cards when an AI tool moves a button or changes a plan.</p><div class=card><span class="tag soon">Coming soon</span><p>No entries yet. Tracking starts with ChatGPT, Claude and Gemini. Baseline: {D}.</p></div>"""))
 w("disclosure.html",page("Affiliate disclosure","""<h1>Affiliate disclosure</h1><p>StepShot AI may earn a commission when you sign up for a tool through some of our links, at no extra cost to you. Affiliate links will always be labeled. Commissions never change our scores, and we may write guides for tools that pay us nothing.</p><p class=note>Right now this site has no affiliate links.</p>"""))
+w("CNAME","stepshotai.com\n")
