@@ -21,7 +21,7 @@ def page(t,body,depth=0):
     p="../"*depth
     return f"""<!doctype html><html lang=en><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>{t} · StepShot AI</title><link rel=stylesheet href="{p}style.css"></head><body>
 <header><a class=logo href="{p}index.html">📸 StepShot AI</a><nav><a href="{p}index.html">Guides</a><a href="{p}scores.html">Scoring</a><a href="{p}changes.html">What changed</a><a href="{p}disclosure.html">Disclosure</a></nav></header>
-<main>{body}</main><footer>Some links on StepShot AI may become affiliate links; we'll label them. <a href="{p}disclosure.html">Affiliate disclosure</a>. Visuals are illustrations, not real screenshots. Product names belong to their owners; StepShot AI is not affiliated with them. Local preview — not published.</footer></body></html>"""
+<main>{body}</main><footer>Some links on StepShot AI may become affiliate links; we'll label them. <a href="{p}disclosure.html">Affiliate disclosure</a>. Visuals are illustrations, not real screenshots. Product names belong to their owners; StepShot AI is not affiliated with them.</footer></body></html>"""
 NS="Not yet scored — needs a timed hands-on test"
 TOOLS={
 "chatgpt":dict(src2="https://help.openai.com/en/articles/7232927",n="ChatGPT",src="https://chatgpt.com/pricing",free="Yes. OpenAI's pricing page: \"The free version of ChatGPT is available to everyone\"; paid plans Go, Plus, Pro (plus Business/Enterprise).",fs="Generous free tier",sub="OpenAI Help (help.openai.com/en/articles/7232927): web subscribers cancel via account menu > Settings > Billing > Cancel plan > Cancel; App Store / Google Play subscribers must cancel in that store. Uninstalling the app does NOT cancel. Cancel 24h+ before billing date.",ss="Medium risk: clear cancel steps, but three different billing places and \"uninstall doesn't cancel\" are easy traps"),
@@ -61,13 +61,15 @@ def mock(kind,c,url):
     if kind=="para": return '<div class="input hl">Good morning! Today we are going to learn three easy steps to…</div>'
     if kind=="play": return f'<div class=input><span class="btn {c}" style="padding:2px 12px">▶</span> ━━━━━━━━○──── 0:12</div>'
     if kind.startswith("button:"): return f'<div class=bar style="width:50%"></div><span class="btn {c}">{kind[7:]}</span>'
+EMBED=open("beehiiv_embed.txt").read().strip()
+SIGNUP='<h2>Get one new guide a week</h2><div class=card>'+EMBED+'<p style="font-size:16px">Form not showing? <a href="https://juliannes-newsletter-ac1bcb.beehiiv.com/subscribe">Subscribe here</a>.</p></div>'
 def w(path,s): open(path,"w").write(s)
 w("style.css",CSS)
 cards="".join(f'<a class=card href="guides/{k}.html" style="text-decoration:none;color:inherit"><span class="tag ready">Guide ready</span><h3>{TOOLS[k]["n"]}</h3>{GUIDES[k][0]} · 5 steps</a>' for k in GUIDES)
 cards+="".join(f'<div class=card><span class="tag soon">Coming soon</span><h3>{o}</h3>Guide and score card not written yet.</div>' for o in OTHER)
 w("index.html",page("Home",f"""<div class=hero><h1>AI tools, one picture at a time.</h1><p>Color-coded, step-by-step guides for visual learners and ADHD brains. One action per step. A <b>“you should see this”</b> check after every step, so you always know you're on track.</p></div>
 <h2>Guides</h2><div class=grid>{cards}</div>
-<h2>Get one new guide a week</h2><div class=card><form onsubmit="alert('Preview only — signup is not connected yet.');return false"><label>Email<br><input type=email placeholder="you@example.com" required></label><br><button>Subscribe</button></form><p class=note>Placeholder: this form doesn't send anywhere yet.</p></div>"""))
+{SIGNUP}"""))
 for k,(title,steps,sees,kinds,url,src,flags) in GUIDES.items():
     T=TOOLS[k]
     body=f'<p><a href="../tools/{k}.html">{T["n"]} score card →</a></p><h1>{title}</h1><p class=note>⏱ 5 steps · Last checked {D}. Pictures are simplified illustrations; the real screen may look different and changes often.</p>'
@@ -75,6 +77,7 @@ for k,(title,steps,sees,kinds,url,src,flags) in GUIDES.items():
         c=f"c{i%5}"
         body+=f'<section class=step><div class=sh><span class="num {c}">{i+1}</span>{html.escape(s)}</div><div class=mock>{mock(kinds[i],c,url)}</div><div class=see><b>You should see:</b> {html.escape(e)}</div></section>'
     body+='<div class=card><b>Source for these steps</b> (checked '+D+'):<ul>'+''.join(f'<li><a href="{u}">{html.escape(n)}</a></li>' for n,u in src)+'</ul>'+(('<p class=note>⚠ Not confirmed in official docs, so worded generally:<br>'+'<br>'.join(html.escape(f) for f in flags)+'</p>') if flags else '<p>✔ All steps matched official docs.</p>')+'</div>'
+    body+=SIGNUP
     body+='<p>🎉 Done! You got your first result. <a href="../index.html">Pick another guide</a>.</p>'
     w(f"guides/{k}.html",page(title,body,1))
 for k,T in TOOLS.items():
@@ -93,4 +96,4 @@ w("scores.html",page("Scoring",f"""<h1>How we score</h1><table><tr><th>Measure</
 <tr><td>Easy to forget subscription</td><td>Annual prepay, bundles, app-store billing, and whether official help shows a clear cancel path.</td></tr></table>
 <p class=note>If we haven't tested something, we say “not yet scored” instead of guessing. Each card links its source and last-checked date.</p>"""))
 w("changes.html",page("What changed",f"""<h1>What changed</h1><p>Before/after picture cards when an AI tool moves a button or changes a plan.</p><div class=card><span class="tag soon">Coming soon</span><p>No entries yet. Tracking starts with ChatGPT, Claude and Gemini. Baseline: {D}.</p></div>"""))
-w("disclosure.html",page("Affiliate disclosure","""<h1>Affiliate disclosure</h1><p>StepShot AI may earn a commission when you sign up for a tool through some of our links, at no extra cost to you. Affiliate links will always be labeled. Commissions never change our scores, and we may write guides for tools that pay us nothing.</p><p class=note>Right now this preview has no affiliate links.</p>"""))
+w("disclosure.html",page("Affiliate disclosure","""<h1>Affiliate disclosure</h1><p>StepShot AI may earn a commission when you sign up for a tool through some of our links, at no extra cost to you. Affiliate links will always be labeled. Commissions never change our scores, and we may write guides for tools that pay us nothing.</p><p class=note>Right now this site has no affiliate links.</p>"""))
