@@ -62,7 +62,7 @@ def mock(kind,c,url):
     if kind=="play": return f'<div class=input><span class="btn {c}" style="padding:2px 12px">▶</span> ━━━━━━━━○──── 0:12</div>'
     if kind.startswith("button:"): return f'<div class=bar style="width:50%"></div><span class="btn {c}">{kind[7:]}</span>'
 EMBED=open("beehiiv_embed.txt").read().strip()
-SIGNUP='<h2>Get one new guide a week</h2><div class=card>'+EMBED+'<p style="font-size:16px">Form not showing? <a href="https://juliannes-newsletter-ac1bcb.beehiiv.com/subscribe">Subscribe here</a>.</p></div>'
+SIGNUP='<h2>Get one new guide a week</h2><div class=card>'+EMBED+'<p style="font-size:16px">Form not showing? <a href="https://stepshotai.beehiiv.com/subscribe">Subscribe here</a>.</p></div>'
 def w(path,s): open(path,"w").write(s)
 w("style.css",CSS)
 cards="".join(f'<a class=card href="guides/{k}.html" style="text-decoration:none;color:inherit"><span class="tag ready">Guide ready</span><h3>{TOOLS[k]["n"]}</h3>{GUIDES[k][0]} · 5 steps</a>' for k in GUIDES)
