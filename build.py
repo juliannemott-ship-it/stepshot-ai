@@ -14,7 +14,7 @@ main{max-width:860px;margin:auto;padding:20px}.grid{display:grid;grid-template-c
 .input{border:2px solid #b9b2a3;border-radius:12px;padding:10px;background:#fff;color:#777}.hl{outline:5px solid #ffd166;outline-offset:3px}
 .see{margin:14px 18px 18px;padding:12px 16px;border-radius:12px;background:#d8f3dc;color:#1b4332}.see b:before{content:"✔ "}
 table{width:100%;border-collapse:collapse;background:#fff;border-radius:12px;overflow:hidden}td,th{padding:10px;border-bottom:1px solid #eee;text-align:left;vertical-align:top;font-size:16px}
-.note{background:#fff4d6;border-radius:12px;padding:12px 16px;font-size:16px}input[type=email]{font-size:18px;padding:12px;border-radius:12px;border:2px solid #b9b2a3;width:100%;max-width:340px}
+.note{background:#fff4d6;border-radius:12px;padding:12px 16px;font-size:16px}input[type=email],input[type=date],select{font:18px/1.4 system-ui,sans-serif;padding:12px;border-radius:12px;border:2px solid #b9b2a3;width:100%;max-width:340px;background:#fff;color:#2b2d42}
 button{font-size:18px;padding:12px 20px;border-radius:12px;border:0;background:#3a6ea5;color:#fff;font-weight:700;margin-top:8px}
 .c0{background:#3a6ea5}.c1{background:#2a9d8f}.c2{background:#e76f51}.c3{background:#8e6bbf}.c4{background:#d4a017}
 .sheet{background:#fff;color:#111}.sheet h1{font-size:40px;line-height:1.15;margin:0 0 8px}
@@ -103,6 +103,115 @@ def cheat_sheet(k):
         f'{rows}<div class=grid>'
         f'<div class=card><h2>Free tier</h2><p><b>{html.escape(T["fs"])}</b></p><p>{html.escape(T["free"])}</p></div>'
         f'<div class=card><h2>How to cancel</h2><p>{html.escape(T["sub"])}</p></div></div>')
+# Trial length is not on the pricing cards, so the reminder states this assumption.
+# Renewal is TRIAL_DAYS after the start date. The email date is REMIND_BEFORE days earlier.
+TRIAL_DAYS=30
+REMIND_BEFORE=2
+# TODO: reminder automation. No backend exists. reminder() only computes a date
+# in the browser and reuses the Beehiiv email embed. It does not schedule an email.
+def reminder(preset=""):
+    opts=[f'<option value=""{"" if preset else " selected"}>Choose a tool</option>']
+    for k,T in TOOLS.items():
+        sel=" selected" if k==preset else ""
+        opts.append(f'<option value="{html.escape(k)}"{sel}>{html.escape(T["n"])}</option>')
+    empty="Pick a trial start date. We count a 30-day trial and show the day 2 days before it renews."
+    return f"""<h2 id=cancel-reminder>Remind me before it renews</h2><div class=card>
+<p>Tell us which tool and when your trial started, we'll email you 2 days before it renews.</p>
+<form data-cancel-reminder data-trial-days={TRIAL_DAYS} data-remind-before={REMIND_BEFORE}>
+<label>Email<br><input type=email name=email required placeholder="you@example.com" autocomplete=email></label><br>
+<label>Tool<br><select name=tool required>{''.join(opts)}</select></label><br>
+<label>Trial start date<br><input type=date name=start required></label>
+<p class=note data-reminder data-empty="{html.escape(empty)}" aria-live=polite>{html.escape(empty)}</p>
+<button type=submit>Email me 2 days before</button>
+<p class=note data-reminder-result hidden aria-live=polite></p>
+</form>
+<!--
+TODO: reminder automation. No backend exists.
+The date above is computed in the browser only: renewal is {TRIAL_DAYS} days after the trial start, and the reminder is {REMIND_BEFORE} days before that.
+Submitting does not schedule an email and does not store the tool, trial start, or reminder date.
+The Beehiiv embed below is the same signup as the weekly guide (beehiiv_embed.txt). That published form only accepts an email address, so tool and dates cannot be posted with it.
+When a backend exists, save email, tool, trial start, and reminder date, and send the reminder on that date.
+-->
+<div data-beehiiv>{EMBED}</div>
+<p style="font-size:16px">Form not showing? <a href="https://stepshotai.beehiiv.com/subscribe">Subscribe here</a>.</p>
+<script>
+(function(){{
+  var forms=document.querySelectorAll("form[data-cancel-reminder]");
+  for(var i=0;i<forms.length;i++) bind(forms[i]);
+  function bind(form){{
+    var trialDays=+form.getAttribute("data-trial-days");
+    var before=+form.getAttribute("data-remind-before");
+    var start=form.querySelector("[name=start]");
+    var tool=form.querySelector("[name=tool]");
+    var live=form.querySelector("[data-reminder]");
+    var result=form.querySelector("[data-reminder-result]");
+    function parseISO(iso){{
+      var p=(iso||"").split("-");
+      if(p.length!==3) return null;
+      var y=+p[0], m=+p[1], d=+p[2];
+      if(!y||!m||!d) return null;
+      var dt=new Date(y,m-1,d);
+      if(dt.getFullYear()!==y||dt.getMonth()!==m-1||dt.getDate()!==d) return null;
+      return dt;
+    }}
+    function addDays(date,n){{
+      var d=new Date(date.getFullYear(),date.getMonth(),date.getDate());
+      d.setDate(d.getDate()+n);
+      return d;
+    }}
+    function pretty(d){{
+      return d.toLocaleDateString("en",{{weekday:"long",year:"numeric",month:"long",day:"numeric"}});
+    }}
+    function esc(s){{
+      return String(s).replace(/[&<>"]/g,function(c){{return {{"&":"&amp;","<":"&lt;",">":"&gt;","\\"":"&quot;"}}[c];}});
+    }}
+    function dates(){{
+      var startDate=parseISO(start.value);
+      if(!startDate) return null;
+      var renew=addDays(startDate,trialDays);
+      var remind=addDays(renew,-before);
+      return {{renew:renew,remind:remind}};
+    }}
+    function update(){{
+      var when=dates();
+      if(!when){{
+        live.className="note";
+        live.textContent=live.getAttribute("data-empty");
+        return;
+      }}
+      var today=new Date();
+      today=new Date(today.getFullYear(),today.getMonth(),today.getDate());
+      var label="Reminder date";
+      if(tool.value) label+=" for "+tool.options[tool.selectedIndex].text;
+      var passed=when.remind<today?" That date has already passed.":"";
+      live.className="see";
+      live.innerHTML="<b>"+esc(label)+":</b> "+esc(pretty(when.remind))+". That's 2 days before the renewal on "+esc(pretty(when.renew))+"."+esc(passed);
+    }}
+    start.addEventListener("input",update);
+    start.addEventListener("change",update);
+    tool.addEventListener("change",update);
+    form.addEventListener("submit",function(ev){{
+      ev.preventDefault();
+      // TODO: reminder automation. No backend exists.
+      // Do not treat this submit as a scheduled email. The tool, trial start,
+      // and reminder date stay in the browser. Email signup is the Beehiiv
+      // embed in this card (same script as the weekly guide). That form only
+      // has an email field, so the tool and dates are not sent with it.
+      update();
+      var when=dates();
+      if(!when) return;
+      var today=new Date();
+      today=new Date(today.getFullYear(),today.getMonth(),today.getDate());
+      var name=tool.options[tool.selectedIndex].text;
+      var passed=when.remind<today?" That date has already passed.":"";
+      result.hidden=false;
+      result.textContent="Reminder for "+name+" ("+form.email.value.trim()+"): "+pretty(when.remind)+"."+passed+" Not scheduled yet — this site has no reminder backend. The Beehiiv form below saves your email only, the same way as the weekly guide.";
+    }});
+    update();
+  }}
+}})();
+</script>
+</div>"""
 def w(path,s): open(path,"w").write(s)
 w("style.css",CSS)
 os.makedirs("print",exist_ok=True)
@@ -110,6 +219,7 @@ cards="".join(f'<a class=card href="guides/{k}.html" style="text-decoration:none
 cards+="".join(f'<div class=card><span class="tag soon">Coming soon</span><h3>{o}</h3>Guide and score card not written yet.</div>' for o in OTHER)
 w("index.html",page("Home",f"""<div class=hero><h1>AI tools, one picture at a time.</h1><p>Color-coded, step-by-step guides for visual learners and ADHD brains. One action per step. A <b>“you should see this”</b> check after every step, so you always know you're on track.</p></div>
 <h2>Guides</h2><div class=grid>{cards}</div>
+{reminder()}
 {SIGNUP}"""))
 for k,(title,steps,sees,kinds,url,src,flags) in GUIDES.items():
     T=TOOLS[k]
@@ -131,7 +241,8 @@ for k,T in TOOLS.items():
 <tr><td>Steps to first result</td><td>{NS}</td><td>Our guide uses 5 steps, but that is our teaching pace, not a measured count.</td></tr>
 <tr><td>Free tier</td><td>{T['fs']}</td><td>{html.escape(T['free'])}</td></tr>
 <tr><td>Easy to forget subscription</td><td>{T['ss']}</td><td>{html.escape(T['sub'])}</td></tr></table>
-<p><a href="../guides/{k}.html">Read the guide →</a></p>""",1))
+<p><a href="../guides/{k}.html">Read the guide →</a></p>
+{reminder(k)}""",1))
 w("scores.html",page("Scoring",f"""<h1>How we score</h1><table><tr><th>Measure</th><th>What we check</th></tr>
 <tr><td>Clutter</td><td>Count of buttons, banners and pop-ups on the first screen after sign-in (hands-on, fresh account).</td></tr>
 <tr><td>Steps to first result</td><td>Clicks/inputs from landing page to first useful answer, timed, fresh account.</td></tr>

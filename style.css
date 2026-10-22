@@ -12,7 +12,7 @@ main{max-width:860px;margin:auto;padding:20px}.grid{display:grid;grid-template-c
 .input{border:2px solid #b9b2a3;border-radius:12px;padding:10px;background:#fff;color:#777}.hl{outline:5px solid #ffd166;outline-offset:3px}
 .see{margin:14px 18px 18px;padding:12px 16px;border-radius:12px;background:#d8f3dc;color:#1b4332}.see b:before{content:"✔ "}
 table{width:100%;border-collapse:collapse;background:#fff;border-radius:12px;overflow:hidden}td,th{padding:10px;border-bottom:1px solid #eee;text-align:left;vertical-align:top;font-size:16px}
-.note{background:#fff4d6;border-radius:12px;padding:12px 16px;font-size:16px}input[type=email]{font-size:18px;padding:12px;border-radius:12px;border:2px solid #b9b2a3;width:100%;max-width:340px}
+.note{background:#fff4d6;border-radius:12px;padding:12px 16px;font-size:16px}input[type=email],input[type=date],select{font:18px/1.4 system-ui,sans-serif;padding:12px;border-radius:12px;border:2px solid #b9b2a3;width:100%;max-width:340px;background:#fff;color:#2b2d42}
 button{font-size:18px;padding:12px 20px;border-radius:12px;border:0;background:#3a6ea5;color:#fff;font-weight:700;margin-top:8px}
 .c0{background:#3a6ea5}.c1{background:#2a9d8f}.c2{background:#e76f51}.c3{background:#8e6bbf}.c4{background:#d4a017}
 .sheet{background:#fff;color:#111}.sheet h1{font-size:40px;line-height:1.15;margin:0 0 8px}
