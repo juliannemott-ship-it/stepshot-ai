@@ -1,4 +1,4 @@
-import html, os
+import html, json, os
 D="Oct 16, 2026"
 CSS="""*{box-sizing:border-box}body{margin:0;font:18px/1.6 system-ui,sans-serif;background:#f7f5f0;color:#2b2d42}
 a{color:#3a6ea5}header,footer{background:#fff;padding:14px 20px;border-bottom:1px solid #e6e2d8}footer{border-top:1px solid #e6e2d8;font-size:15px;margin-top:40px}
@@ -43,7 +43,7 @@ def page(t,body,depth=0,body_class=""):
     p="../"*depth
     bc=f" class={body_class}" if body_class else ""
     return f"""<!doctype html><html lang=en><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>{t} · StepShot AI</title><link rel=stylesheet href="{p}style.css"></head><body{bc}>
-<header><a class=logo href="{p}index.html">📸 StepShot AI</a><nav><a href="{p}index.html">Guides</a><a href="{p}scores.html">Scoring</a><a href="{p}changes.html">What changed</a><a href="{p}disclosure.html">Disclosure</a></nav></header>
+<header><a class=logo href="{p}index.html">📸 StepShot AI</a><nav><a href="{p}index.html">Guides</a><a href="{p}checker.html">Should I pay?</a><a href="{p}scores.html">Scoring</a><a href="{p}changes.html">What changed</a><a href="{p}disclosure.html">Disclosure</a></nav></header>
 <main>{body}</main><footer>Some links on StepShot AI may become affiliate links; we'll label them. <a href="{p}disclosure.html">Affiliate disclosure</a>. Visuals are illustrations, not real screenshots. Product names belong to their owners; StepShot AI is not affiliated with them.</footer></body></html>"""
 NS="Not yet scored — needs a timed hands-on test"
 TOOLS={
@@ -140,4 +140,336 @@ w("scores.html",page("Scoring",f"""<h1>How we score</h1><table><tr><th>Measure</
 <p class=note>If we haven't tested something, we say “not yet scored” instead of guessing. Each card links its source and last-checked date.</p>"""))
 w("changes.html",page("What changed",f"""<h1>What changed</h1><p>Before/after picture cards when an AI tool moves a button or changes a plan.</p><div class=card><span class="tag soon">Coming soon</span><p>No entries yet. Tracking starts with ChatGPT, Claude and Gemini. Baseline: {D}.</p></div>"""))
 w("disclosure.html",page("Affiliate disclosure","""<h1>Affiliate disclosure</h1><p>StepShot AI may earn a commission when you sign up for a tool through some of our links, at no extra cost to you. Affiliate links will always be labeled. Commissions never change our scores, and we may write guides for tools that pay us nothing.</p><p class=note>Right now this site has no affiliate links.</p>"""))
+# "Should I pay?" — verdicts use only TOOLS fields already on the score cards:
+#   fs (exact free-tier label), the ss prefix (High / Medium-high / Medium risk),
+#   and whether free+sub+ss already mention annual billing or an unverified monthly price.
+# No prices are added. User answers are how often, what for, and whether they need paid features.
+FREE_CONTINUES={
+"Generous free tier","Usable free tier","Free tier exists (limits not verified)","Small AI allowance on free",
+}
+FREE_RUNS_OUT={"Free start, one-time credits","AI is trial-only on free"}
+TITLES={"free":"Free is enough","monthly":"Pay monthly","skip":"Skip it"}
+OFTEN_PHRASE={"rare":"rarely (once in a while)","weekly":"a few times a week","daily":"most days"}
+PURPOSE_PHRASE={"try":"just trying it","personal":"personal tasks","work":"work or school you depend on"}
+def risk_band(ss):
+    if ss.startswith("High risk"): return "high"
+    if ss.startswith("Medium-high risk"): return "medium-high"
+    if ss.startswith("Medium risk"): return "medium"
+    raise SystemExit("checker: unknown subscription risk: "+ss)
+def band_label(band):
+    return {"high":"High risk","medium-high":"Medium-high risk","medium":"Medium risk"}[band]
+def pay_caveat(T):
+    blob=" ".join((T["free"],T["sub"],T["ss"])).lower()
+    if "monthly price not verified" in blob:
+        return "The pricing note already on this site says the monthly price is not verified. Check the official pricing page before you pay. This page does not add a price."
+    if "annually" in blob or "annual" in blob or "/year" in blob:
+        return "Notes already on this site mention annual billing. If you pay, choose a monthly plan when the official pricing page offers one. This page does not add a price."
+    return "This page does not add a price. Read the cancel steps below before you subscribe."
+def decide(often,purpose,premium,T):
+    fs,name=T["fs"],T["n"]
+    if fs in FREE_CONTINUES: runs_out=False
+    elif fs in FREE_RUNS_OUT: runs_out=True
+    else: raise SystemExit("checker: unknown free-tier label: "+fs)
+    band=risk_band(T["ss"])
+    elevated=band in ("high","medium-high")
+    light=often=="rare" or purpose=="try"
+    use=f"You said you would use {name} {OFTEN_PHRASE[often]}, for {PURPOSE_PHRASE[purpose]}."
+    caveat=""
+    if light and premium=="yes":
+        code="skip"
+        if purpose=="try" and often!="rare":
+            why="paying just to try a tool is how a subscription gets forgotten"
+        elif often=="rare" and purpose!="try":
+            why="paying for a rare visit is how a subscription gets forgotten"
+        else:
+            why="paying for a rare visit or a first try is how a subscription gets forgotten"
+        reason=use+f" Skip it: {why}. The free-tier note on this site is “{fs}”."
+    elif light and premium=="unsure" and elevated:
+        code="skip"
+        reason=use+f" Skip it: you are not sure you need paid features, and the subscription note on this site starts with “{band_label(band)}”. The free-tier note is “{fs}”."
+    elif (not light) and premium=="no" and runs_out:
+        code="skip"
+        reason=use+f" Skip it: you do not need paid features, and the free-tier note on this site is “{fs}”, so the free plan will not keep covering regular use."
+    elif (not light) and premium=="yes":
+        code="monthly"
+        caveat=pay_caveat(T)
+        reason=use+f" Pay monthly: you said you need the paid features. The free-tier note on this site is “{fs}”."
+    elif premium in ("no","unsure"):
+        code="free"
+        if runs_out:
+            extra=f"The free-tier note on this site is “{fs}”, so use the free start and stop when it ends."
+        else:
+            extra=f"The free-tier note on this site is “{fs}”."
+        if premium=="unsure":
+            extra+=" You are not sure you need paid features, so stay on free."
+        else:
+            extra+=" You said the free plan covers what you need."
+        reason=use+" "+extra+" Free is enough."
+    else:
+        raise SystemExit("checker: unhandled answers for "+name)
+    if elevated and band_label(band) not in reason:
+        reason+=f" The subscription note on this site starts with “{band_label(band)}”, so read it before you start a trial or enter a card."
+    if "$" in reason or "$" in caveat:
+        raise SystemExit("checker: price leaked into verdict for "+name)
+    return {"v":code,"title":TITLES[code],"reason":reason,"caveat":caveat}
+CHECK_QUESTIONS=[
+{"id":"often","prompt":"How often would you use {tool}?","options":[
+    {"id":"rare","label":"Rarely — once in a while"},
+    {"id":"weekly","label":"A few times a week"},
+    {"id":"daily","label":"Most days"}]},
+{"id":"purpose","prompt":"What would you use {tool} for?","options":[
+    {"id":"try","label":"Just to try it"},
+    {"id":"personal","label":"Personal tasks"},
+    {"id":"work","label":"Work or school I depend on"}]},
+{"id":"premium","prompt":"Do you need the paid features?","options":[
+    {"id":"no","label":"No — the free plan covers what I need"},
+    {"id":"unsure","label":"Not sure"},
+    {"id":"yes","label":"Yes — I need the paid features"}]},
+]
+CHECK_RULES=[
+{"title":"Free is enough","text":"You did not say you need paid features for ongoing use, or you are not sure. The free-tier label still fits, including a free start you stop when it ends."},
+{"title":"Pay monthly","text":"You would use it a few times a week or most days, for personal tasks or for work or school, and you said you need the paid features. If the stored notes mention annual billing or an unverified monthly price, the page repeats that. No price is added."},
+{"title":"Skip it","text":"You want paid features for a rare try. Or you are not sure, your use is light, and the subscription note is high or medium-high risk. Or you would use it regularly, the free-tier label says it runs out, and you do not want to pay."},
+]
+if len(TOOLS)!=10: raise SystemExit("checker: expected 10 tools")
+checker_tools=[]
+answers={}
+for tid,T in TOOLS.items():
+    if not tid.isalpha(): raise SystemExit("checker: bad id "+tid)
+    for url in (T["src"],T.get("src2","")):
+        if url and not url.startswith("https://"): raise SystemExit("checker: bad url "+url)
+    risk_band(T["ss"])
+    checker_tools.append({"id":tid,"n":T["n"],"fs":T["fs"],"ss":T["ss"],"sub":T["sub"],"src":T["src"],"src2":T.get("src2") or ""})
+    for q1 in CHECK_QUESTIONS[0]["options"]:
+        for q2 in CHECK_QUESTIONS[1]["options"]:
+            for q3 in CHECK_QUESTIONS[2]["options"]:
+                answers[f"{tid}|{q1['id']}|{q2['id']}|{q3['id']}"]=decide(q1["id"],q2["id"],q3["id"],T)
+EXPECT={
+("chatgpt","rare","try","no"):"free",
+("chatgpt","rare","try","yes"):"skip",
+("chatgpt","daily","work","yes"):"monthly",
+("chatgpt","daily","work","no"):"free",
+("chatgpt","weekly","personal","unsure"):"free",
+("copilot","rare","try","unsure"):"skip",
+("copilot","rare","try","no"):"free",
+("copilot","daily","work","yes"):"monthly",
+("gemini","weekly","try","unsure"):"skip",
+("notion","weekly","personal","no"):"skip",
+("notion","rare","try","no"):"free",
+("notion","daily","work","yes"):"monthly",
+("gamma","daily","personal","no"):"skip",
+("canva","daily","work","unsure"):"free",
+("canva","daily","work","yes"):"monthly",
+("elevenlabs","weekly","work","yes"):"monthly",
+("otter","rare","personal","yes"):"skip",
+("perplexity","daily","work","yes"):"monthly",
+("claude","daily","try","yes"):"skip",
+("claude","weekly","work","no"):"free",
+}
+for key,want in EXPECT.items():
+    got=answers["|".join(key)]
+    if got["v"]!=want: raise SystemExit(f"checker expect {key} {want} got {got['v']}: {got['reason']}")
+if "not verified" not in answers["perplexity|daily|work|yes"]["caveat"]: raise SystemExit("checker: perplexity caveat")
+if "annual" not in answers["canva|daily|work|yes"]["caveat"].lower(): raise SystemExit("checker: canva caveat")
+if "annual" not in answers["claude|weekly|personal|yes"]["caveat"].lower(): raise SystemExit("checker: claude caveat")
+plain=answers["chatgpt|daily|work|yes"]["caveat"].lower()
+if "annual" in plain or "not verified" in plain or "does not add a price" not in plain: raise SystemExit("checker: chatgpt caveat")
+if answers["chatgpt|rare|try|no"]["caveat"]!="": raise SystemExit("checker: free caveat")
+if "High risk" not in answers["copilot|rare|try|no"]["reason"]: raise SystemExit("checker: copilot risk sentence")
+if "Medium-high risk" not in answers["gemini|daily|work|no"]["reason"]: raise SystemExit("checker: gemini risk sentence")
+seen={}
+for key,row in answers.items():
+    tid,rest=key.split("|",1)
+    T=TOOLS[tid]
+    if T["fs"] not in row["reason"] or T["n"] not in row["reason"]: raise SystemExit("checker: reason missing fact "+key)
+    if "$" in row["reason"] or "$" in row["title"] or "$" in row["caveat"]: raise SystemExit("checker: price in "+key)
+    if row["title"]!=TITLES[row["v"]]: raise SystemExit("checker: bad title "+key)
+    if row["v"]=="monthly" and not row["caveat"]: raise SystemExit("checker: monthly without caveat "+key)
+    if row["v"]!="monthly" and row["caveat"]: raise SystemExit("checker: caveat on "+key)
+    seen.setdefault(tid,set()).add(row["v"])
+for tid,vs in seen.items():
+    if vs!={"free","monthly","skip"}: raise SystemExit(f"checker: {tid} missing a verdict {vs}")
+if len(answers)!=270: raise SystemExit("checker: expected 270 verdicts")
+checker_payload=json.dumps({
+"checked":D,
+"questions":CHECK_QUESTIONS,
+"rules":CHECK_RULES,
+"tools":checker_tools,
+"answers":answers,
+},ensure_ascii=False,indent=2).replace("<","\\u003c").replace(">","\\u003e").replace("&","\\u0026")
+CHECKER_JS=r"""(function () {
+  var DATA = __DATA__;
+  var root = document.getElementById("app");
+  var state = { step: 0, tool: "", often: "", purpose: "", premium: "" };
+
+  function el(tag, attrs, text) {
+    var n = document.createElement(tag);
+    if (attrs) {
+      Object.keys(attrs).forEach(function (k) {
+        n.setAttribute(k, attrs[k]);
+      });
+    }
+    if (text != null && text !== "") n.textContent = text;
+    return n;
+  }
+  function toolById(id) {
+    for (var i = 0; i < DATA.tools.length; i++) {
+      if (DATA.tools[i].id === id) return DATA.tools[i];
+    }
+    return null;
+  }
+  function reset() {
+    state.step = 0;
+    state.tool = "";
+    state.often = "";
+    state.purpose = "";
+    state.premium = "";
+    render();
+  }
+  function goBack(e) {
+    e.preventDefault();
+    if (state.step > 0) state.step -= 1;
+    render();
+  }
+  function choiceButton(label, onClick) {
+    var b = el("button", { type: "button" }, label);
+    b.style.display = "block";
+    b.style.width = "100%";
+    b.style.textAlign = "left";
+    b.addEventListener("click", onClick);
+    return b;
+  }
+  function renderPicker() {
+    var hero = el("div", { "class": "hero" });
+    hero.appendChild(el("h1", null, "Should I pay?"));
+    hero.appendChild(el("p", null, "Pick a tool. Answer 3 questions about how you would use it. Get a plain verdict: free is enough, pay monthly, or skip it."));
+    root.appendChild(hero);
+    root.appendChild(el("p", { "class": "note" }, "Guidance only. A verdict uses two facts already stored for that tool: the free-tier label and the subscription note. This page does not add prices. Your answers stay in this browser and are not sent anywhere. Tool notes last checked " + DATA.checked + "."));
+    root.appendChild(el("h2", null, "Pick a tool"));
+    var grid = el("div", { "class": "grid" });
+    DATA.tools.forEach(function (t) {
+      var card = el("div", { "class": "card" });
+      card.appendChild(el("h3", null, t.n));
+      card.appendChild(el("span", { "class": "tag soon" }, t.fs));
+      var btn = el("button", { type: "button" }, "Check " + t.n);
+      btn.addEventListener("click", function () {
+        state.tool = t.id;
+        state.often = "";
+        state.purpose = "";
+        state.premium = "";
+        state.step = 1;
+        render();
+      });
+      card.appendChild(btn);
+      grid.appendChild(card);
+    });
+    root.appendChild(grid);
+    var how = el("div", { "class": "card" });
+    how.style.marginTop = "24px";
+    how.appendChild(el("h2", null, "How this decides"));
+    how.appendChild(el("p", null, "Three answers, then one verdict. Under every verdict: that tool’s subscription risk and cancel steps, copied from the score card."));
+    var ul = document.createElement("ul");
+    DATA.rules.forEach(function (rule) {
+      var li = document.createElement("li");
+      li.appendChild(el("b", null, rule.title + " — "));
+      li.appendChild(document.createTextNode(rule.text));
+      ul.appendChild(li);
+    });
+    how.appendChild(ul);
+    root.appendChild(how);
+  }
+  function renderQuestion() {
+    var t = toolById(state.tool);
+    var q = DATA.questions[state.step - 1];
+    var back = el("a", { href: "#app" }, "Back");
+    back.addEventListener("click", goBack);
+    root.appendChild(back);
+    var tags = el("p");
+    var nameTag = el("span", { "class": "tag ready" }, t.n);
+    nameTag.style.marginRight = "8px";
+    tags.appendChild(nameTag);
+    tags.appendChild(el("span", { "class": "tag soon" }, t.fs));
+    root.appendChild(tags);
+    var step = el("section", { "class": "step" });
+    var sh = el("div", { "class": "sh" });
+    sh.appendChild(el("span", { "class": "num c" + ((state.step - 1) % 5) }, String(state.step)));
+    var label = el("span", null, q.prompt.split("{tool}").join(t.n));
+    label.style.flex = "1";
+    sh.appendChild(label);
+    step.appendChild(sh);
+    root.appendChild(step);
+    var card = el("div", { "class": "card" });
+    q.options.forEach(function (opt) {
+      card.appendChild(choiceButton(opt.label, function () {
+        state[q.id] = opt.id;
+        state.step += 1;
+        render();
+      }));
+    });
+    root.appendChild(card);
+    window.scrollTo(0, 0);
+  }
+  function renderVerdict() {
+    var t = toolById(state.tool);
+    var key = [state.tool, state.often, state.purpose, state.premium].join("|");
+    var row = DATA.answers[key];
+    var back = el("a", { href: "#app" }, "Back");
+    back.addEventListener("click", goBack);
+    root.appendChild(back);
+    if (!row) {
+      root.appendChild(el("p", { "class": "note" }, "That combination has no stored verdict. Re-run build.py."));
+      return;
+    }
+    root.appendChild(el("p", { "class": "note" }, "Guidance only. This uses the free-tier label and the subscription note already published for " + t.n + ". This page does not add prices. Your answers were not sent anywhere."));
+    var hero = el("div", { "class": "hero" });
+    hero.appendChild(el("span", { "class": "tag ready" }, "Guidance"));
+    hero.appendChild(el("h1", null, row.title));
+    hero.appendChild(el("p", null, row.reason));
+    if (row.caveat) hero.appendChild(el("p", null, row.caveat));
+    root.appendChild(hero);
+    var chips = el("p");
+    DATA.questions.forEach(function (q) {
+      var chosen = "";
+      q.options.forEach(function (opt) {
+        if (opt.id === state[q.id]) chosen = opt.label;
+      });
+      var chip = el("span", { "class": "tag soon" }, chosen);
+      chip.style.marginRight = "8px";
+      chips.appendChild(chip);
+    });
+    root.appendChild(chips);
+    root.appendChild(el("h2", null, "Subscription risk"));
+    root.appendChild(el("div", { "class": "note" }, t.ss));
+    root.appendChild(el("h2", null, "Cancel steps"));
+    root.appendChild(el("div", { "class": "card" }, t.sub));
+    var links = el("p");
+    links.appendChild(el("a", { href: "tools/" + t.id + ".html" }, t.n + " score card"));
+    links.appendChild(document.createTextNode(" · "));
+    links.appendChild(el("a", { href: t.src }, "Official pricing page"));
+    if (t.src2) {
+      links.appendChild(document.createTextNode(" · "));
+      links.appendChild(el("a", { href: t.src2 }, "Official cancel page"));
+    }
+    links.appendChild(document.createTextNode(". Notes last checked " + DATA.checked + "."));
+    root.appendChild(links);
+    var again = el("button", { type: "button" }, "Check another tool");
+    again.addEventListener("click", reset);
+    root.appendChild(again);
+    window.scrollTo(0, 0);
+  }
+  function render() {
+    root.textContent = "";
+    if (state.step <= 0) renderPicker();
+    else if (state.step <= DATA.questions.length) renderQuestion();
+    else renderVerdict();
+  }
+  render();
+})();
+"""
+w("checker.html",page("Should I pay?","""<!-- Generated by build.py from TOOLS. Edit build.py and rerun it. -->
+<div id=app></div>
+<noscript><p class=note>Turn on JavaScript to use the checker. Guidance only: verdicts come from the free-tier label and subscription note already on each score card. This page does not add prices.</p></noscript>
+<script>
+"""+CHECKER_JS.replace("__DATA__",checker_payload)+"""
+</script>""",0))
 w("CNAME","stepshotai.com\n")
