@@ -1,4 +1,4 @@
-import html
+import html, os
 D="Oct 16, 2026"
 CSS="""*{box-sizing:border-box}body{margin:0;font:18px/1.6 system-ui,sans-serif;background:#f7f5f0;color:#2b2d42}
 a{color:#3a6ea5}header,footer{background:#fff;padding:14px 20px;border-bottom:1px solid #e6e2d8}footer{border-top:1px solid #e6e2d8;font-size:15px;margin-top:40px}
@@ -16,10 +16,33 @@ main{max-width:860px;margin:auto;padding:20px}.grid{display:grid;grid-template-c
 table{width:100%;border-collapse:collapse;background:#fff;border-radius:12px;overflow:hidden}td,th{padding:10px;border-bottom:1px solid #eee;text-align:left;vertical-align:top;font-size:16px}
 .note{background:#fff4d6;border-radius:12px;padding:12px 16px;font-size:16px}input[type=email]{font-size:18px;padding:12px;border-radius:12px;border:2px solid #b9b2a3;width:100%;max-width:340px}
 button{font-size:18px;padding:12px 20px;border-radius:12px;border:0;background:#3a6ea5;color:#fff;font-weight:700;margin-top:8px}
-.c0{background:#3a6ea5}.c1{background:#2a9d8f}.c2{background:#e76f51}.c3{background:#8e6bbf}.c4{background:#d4a017}"""
-def page(t,body,depth=0):
+.c0{background:#3a6ea5}.c1{background:#2a9d8f}.c2{background:#e76f51}.c3{background:#8e6bbf}.c4{background:#d4a017}
+.sheet{background:#fff;color:#111}.sheet h1{font-size:40px;line-height:1.15;margin:0 0 8px}
+.sheet .sh{font-size:24px;line-height:1.3;padding:10px 0;border-bottom:2px solid #111}
+.sheet .num{width:44px;height:44px;font-size:22px}
+.sheet .grid{grid-template-columns:repeat(auto-fit,minmax(260px,1fr));margin-top:16px}
+.sheet .card{border:2px solid #111}.sheet .card h2{margin:0 0 6px;font-size:20px}
+.sheet .note{background:#fff;color:#111;border:2px solid #111}
+@page{size:letter;margin:0.5in}
+@media print{
+body.sheet{background:#fff;color:#000;font-size:14pt;line-height:1.25}
+body.sheet header,body.sheet footer,body.sheet .noprint{display:none!important}
+body.sheet main{max-width:none;margin:0;padding:0}
+body.sheet h1{font-size:36pt;margin:0 0 8pt}
+body.sheet .note{font-size:13pt;padding:7pt 9pt;margin:0 0 10pt}
+body.sheet .sh{font-size:20pt;line-height:1.28;padding:6pt 0;gap:10pt;border-bottom:2px solid #000}
+body.sheet .num{width:30pt;height:30pt;font-size:16pt}
+body.sheet .grid{grid-template-columns:1fr 1fr;gap:12pt;margin-top:12pt}
+body.sheet .card{padding:10pt 12pt}
+body.sheet .card h2{font-size:16pt;margin:0 0 4pt}
+body.sheet .card p{font-size:14.5pt;line-height:1.32;margin:4pt 0 0}
+body.sheet a{color:#000;text-decoration:none}
+*{print-color-adjust:exact;-webkit-print-color-adjust:exact}
+}"""
+def page(t,body,depth=0,body_class=""):
     p="../"*depth
-    return f"""<!doctype html><html lang=en><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>{t} · StepShot AI</title><link rel=stylesheet href="{p}style.css"></head><body>
+    bc=f" class={body_class}" if body_class else ""
+    return f"""<!doctype html><html lang=en><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>{t} · StepShot AI</title><link rel=stylesheet href="{p}style.css"></head><body{bc}>
 <header><a class=logo href="{p}index.html">📸 StepShot AI</a><nav><a href="{p}index.html">Guides</a><a href="{p}scores.html">Scoring</a><a href="{p}changes.html">What changed</a><a href="{p}disclosure.html">Disclosure</a></nav></header>
 <main>{body}</main><footer>Some links on StepShot AI may become affiliate links; we'll label them. <a href="{p}disclosure.html">Affiliate disclosure</a>. Visuals are illustrations, not real screenshots. Product names belong to their owners; StepShot AI is not affiliated with them.</footer></body></html>"""
 NS="Not yet scored — needs a timed hands-on test"
@@ -63,8 +86,26 @@ def mock(kind,c,url):
     if kind.startswith("button:"): return f'<div class=bar style="width:50%"></div><span class="btn {c}">{kind[7:]}</span>'
 EMBED=open("beehiiv_embed.txt").read().strip()
 SIGNUP='<h2>Get one new guide a week</h2><div class=card>'+EMBED+'<p style="font-size:16px">Form not showing? <a href="https://stepshotai.beehiiv.com/subscribe">Subscribe here</a>.</p></div>'
+def printable_box(k):
+    return ('<div class=card><h2>Get the printable version</h2>'
+        '<p>Big type on one US Letter page: the five steps, the free tier, and how to cancel. Enter your email in the form above.</p>'
+        f'<!-- Direct link fallback: <a href="../print/{k}.html">Open the printable cheat sheet</a> -->'
+        '<p><span class="tag soon">Bundle of all 10, coming soon</span></p></div>')
+def cheat_sheet(k):
+    title,steps,sees,kinds,url,src,flags=GUIDES[k]
+    T=TOOLS[k]
+    rows="".join(f'<div class=sh><span class="num c{i%5}">{i+1}</span>{html.escape(s)}</div>' for i,s in enumerate(steps))
+    links=f'<a href="{html.escape(T["src"],quote=True)}">Pricing</a>'
+    if "src2" in T: links+=f' · <a href="{html.escape(T["src2"],quote=True)}">Cancel steps</a>'
+    return (f'<p class=noprint><a href="../guides/{k}.html">Back to the {html.escape(T["n"])} guide</a></p>'
+        f'<h1>{html.escape(T["n"])}</h1>'
+        f'<p class=note>StepShot AI · {html.escape(title)} · Last checked {D} · {links}</p>'
+        f'{rows}<div class=grid>'
+        f'<div class=card><h2>Free tier</h2><p><b>{html.escape(T["fs"])}</b></p><p>{html.escape(T["free"])}</p></div>'
+        f'<div class=card><h2>How to cancel</h2><p>{html.escape(T["sub"])}</p></div></div>')
 def w(path,s): open(path,"w").write(s)
 w("style.css",CSS)
+os.makedirs("print",exist_ok=True)
 cards="".join(f'<a class=card href="guides/{k}.html" style="text-decoration:none;color:inherit"><span class="tag ready">Guide ready</span><h3>{TOOLS[k]["n"]}</h3>{GUIDES[k][0]} · 5 steps</a>' for k in GUIDES)
 cards+="".join(f'<div class=card><span class="tag soon">Coming soon</span><h3>{o}</h3>Guide and score card not written yet.</div>' for o in OTHER)
 w("index.html",page("Home",f"""<div class=hero><h1>AI tools, one picture at a time.</h1><p>Color-coded, step-by-step guides for visual learners and ADHD brains. One action per step. A <b>“you should see this”</b> check after every step, so you always know you're on track.</p></div>
@@ -78,8 +119,10 @@ for k,(title,steps,sees,kinds,url,src,flags) in GUIDES.items():
         body+=f'<section class=step><div class=sh><span class="num {c}">{i+1}</span>{html.escape(s)}</div><div class=mock>{mock(kinds[i],c,url)}</div><div class=see><b>You should see:</b> {html.escape(e)}</div></section>'
     body+='<div class=card><b>Source for these steps</b> (checked '+D+'):<ul>'+''.join(f'<li><a href="{u}">{html.escape(n)}</a></li>' for n,u in src)+'</ul>'+(('<p class=note>⚠ Not confirmed in official docs, so worded generally:<br>'+'<br>'.join(html.escape(f) for f in flags)+'</p>') if flags else '<p>✔ All steps matched official docs.</p>')+'</div>'
     body+=SIGNUP
+    body+=printable_box(k)
     body+='<p>🎉 Done! You got your first result. <a href="../index.html">Pick another guide</a>.</p>'
     w(f"guides/{k}.html",page(title,body,1))
+    w(f"print/{k}.html",page(T["n"]+" cheat sheet",cheat_sheet(k),1,"sheet"))
 for k,T in TOOLS.items():
     CX=f" Cancel steps: <a href='{T['src2']}'>{T['src2']}</a>." if 'src2' in T else ''
     w(f"tools/{k}.html",page(T["n"]+" score card",f"""<h1>{T['n']} — ADHD-friendly score card</h1><p class=note>Last checked {D}. Source: <a href="{T['src']}">{T['src']}</a>.{CX} <a href="../scores.html">How we score</a>.</p>
