@@ -6,4 +6,101 @@
 <tr><td>Steps to first result</td><td>Not yet scored — needs a timed hands-on test</td><td>Our guide uses 5 steps, but that is our teaching pace, not a measured count.</td></tr>
 <tr><td>Free tier</td><td>Free tier exists (limits not verified)</td><td>Yes, a free version exists: Microsoft&#x27;s page describes paid plans as having &quot;higher usage than free&quot; and offers &quot;Try for free&quot;. Microsoft 365 Personal (with Copilot) is $9.99/mo; Family $12.99/mo. Free-tier limits not verified.</td></tr>
 <tr><td>Easy to forget subscription</td><td>High risk: free trial that auto-renews, inside a bundle</td><td>Official page: &quot;Subscription automatically renews unless canceled in Microsoft account.&quot; A 1-month free trial is offered. Copilot is bundled with Office apps and 1 TB storage.</td></tr></table>
-<p><a href="../guides/copilot.html">Read the guide →</a></p></main><footer>Some links on StepShot AI may become affiliate links; we'll label them. <a href="../disclosure.html">Affiliate disclosure</a>. Visuals are illustrations, not real screenshots. Product names belong to their owners; StepShot AI is not affiliated with them.</footer></body></html>
+<p><a href="../guides/copilot.html">Read the guide →</a></p>
+<h2 id=cancel-reminder>Remind me before it renews</h2><div class=card>
+<p>Tell us which tool and when your trial started, we'll email you 2 days before it renews.</p>
+<form data-cancel-reminder data-trial-days=30 data-remind-before=2>
+<label>Email<br><input type=email name=email required placeholder="you@example.com" autocomplete=email></label><br>
+<label>Tool<br><select name=tool required><option value="">Choose a tool</option><option value="chatgpt">ChatGPT</option><option value="claude">Claude</option><option value="gemini">Gemini</option><option value="copilot" selected>Microsoft Copilot</option><option value="perplexity">Perplexity</option><option value="canva">Canva AI</option><option value="gamma">Gamma</option><option value="notion">Notion AI</option><option value="elevenlabs">ElevenLabs</option><option value="otter">Otter</option></select></label><br>
+<label>Trial start date<br><input type=date name=start required></label>
+<p class=note data-reminder data-empty="Pick a trial start date. We count a 30-day trial and show the day 2 days before it renews." aria-live=polite>Pick a trial start date. We count a 30-day trial and show the day 2 days before it renews.</p>
+<button type=submit>Email me 2 days before</button>
+<p class=note data-reminder-result hidden aria-live=polite></p>
+</form>
+<!--
+TODO: reminder automation. No backend exists.
+The date above is computed in the browser only: renewal is 30 days after the trial start, and the reminder is 2 days before that.
+Submitting does not schedule an email and does not store the tool, trial start, or reminder date.
+The Beehiiv embed below is the same signup as the weekly guide (beehiiv_embed.txt). That published form only accepts an email address, so tool and dates cannot be posted with it.
+When a backend exists, save email, tool, trial start, and reminder date, and send the reminder on that date.
+-->
+<div data-beehiiv><script async src="https://subscribe-forms.beehiiv.com/v3/loader.js" data-beehiiv-form="cb43d60d-4bad-406a-b2a0-257a837c8d15"></script></div>
+<p style="font-size:16px">Form not showing? <a href="https://stepshotai.beehiiv.com/subscribe">Subscribe here</a>.</p>
+<script>
+(function(){
+  var forms=document.querySelectorAll("form[data-cancel-reminder]");
+  for(var i=0;i<forms.length;i++) bind(forms[i]);
+  function bind(form){
+    var trialDays=+form.getAttribute("data-trial-days");
+    var before=+form.getAttribute("data-remind-before");
+    var start=form.querySelector("[name=start]");
+    var tool=form.querySelector("[name=tool]");
+    var live=form.querySelector("[data-reminder]");
+    var result=form.querySelector("[data-reminder-result]");
+    function parseISO(iso){
+      var p=(iso||"").split("-");
+      if(p.length!==3) return null;
+      var y=+p[0], m=+p[1], d=+p[2];
+      if(!y||!m||!d) return null;
+      var dt=new Date(y,m-1,d);
+      if(dt.getFullYear()!==y||dt.getMonth()!==m-1||dt.getDate()!==d) return null;
+      return dt;
+    }
+    function addDays(date,n){
+      var d=new Date(date.getFullYear(),date.getMonth(),date.getDate());
+      d.setDate(d.getDate()+n);
+      return d;
+    }
+    function pretty(d){
+      return d.toLocaleDateString("en",{weekday:"long",year:"numeric",month:"long",day:"numeric"});
+    }
+    function esc(s){
+      return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c];});
+    }
+    function dates(){
+      var startDate=parseISO(start.value);
+      if(!startDate) return null;
+      var renew=addDays(startDate,trialDays);
+      var remind=addDays(renew,-before);
+      return {renew:renew,remind:remind};
+    }
+    function update(){
+      var when=dates();
+      if(!when){
+        live.className="note";
+        live.textContent=live.getAttribute("data-empty");
+        return;
+      }
+      var today=new Date();
+      today=new Date(today.getFullYear(),today.getMonth(),today.getDate());
+      var label="Reminder date";
+      if(tool.value) label+=" for "+tool.options[tool.selectedIndex].text;
+      var passed=when.remind<today?" That date has already passed.":"";
+      live.className="see";
+      live.innerHTML="<b>"+esc(label)+":</b> "+esc(pretty(when.remind))+". That's 2 days before the renewal on "+esc(pretty(when.renew))+"."+esc(passed);
+    }
+    start.addEventListener("input",update);
+    start.addEventListener("change",update);
+    tool.addEventListener("change",update);
+    form.addEventListener("submit",function(ev){
+      ev.preventDefault();
+      // TODO: reminder automation. No backend exists.
+      // Do not treat this submit as a scheduled email. The tool, trial start,
+      // and reminder date stay in the browser. Email signup is the Beehiiv
+      // embed in this card (same script as the weekly guide). That form only
+      // has an email field, so the tool and dates are not sent with it.
+      update();
+      var when=dates();
+      if(!when) return;
+      var today=new Date();
+      today=new Date(today.getFullYear(),today.getMonth(),today.getDate());
+      var name=tool.options[tool.selectedIndex].text;
+      var passed=when.remind<today?" That date has already passed.":"";
+      result.hidden=false;
+      result.textContent="Reminder for "+name+" ("+form.email.value.trim()+"): "+pretty(when.remind)+"."+passed+" Not scheduled yet — this site has no reminder backend. The Beehiiv form below saves your email only, the same way as the weekly guide.";
+    });
+    update();
+  }
+})();
+</script>
+</div></main><footer>Some links on StepShot AI may become affiliate links; we'll label them. <a href="../disclosure.html">Affiliate disclosure</a>. Visuals are illustrations, not real screenshots. Product names belong to their owners; StepShot AI is not affiliated with them.</footer></body></html>
