@@ -85,7 +85,8 @@ def mock(kind,c,url):
     if kind=="play": return f'<div class=input><span class="btn {c}" style="padding:2px 12px">▶</span> ━━━━━━━━○──── 0:12</div>'
     if kind.startswith("button:"): return f'<div class=bar style="width:50%"></div><span class="btn {c}">{kind[7:]}</span>'
 EMBED=open("beehiiv_embed.txt").read().strip()
-SIGNUP='<h2>Get one new guide a week</h2><div class=card>'+EMBED+'<p style="font-size:16px">Form not showing? <a href="https://stepshotai.beehiiv.com/subscribe">Subscribe here</a>.</p></div>'
+GIFT='Get the free AI Cheat Sheet for ADHD Brains + 1 new picture guide a week'
+SIGNUP='<h2>'+GIFT+'</h2><div class=card><p>Sign up and we\'ll send you straight to your free one-page cheat sheet.</p>'+EMBED+'<p style="font-size:16px">Form not showing? <a href="https://stepshotai.beehiiv.com/subscribe">Subscribe here</a>.</p></div>'
 def printable_box(k):
     return ('<div class=card><h2>Get the printable version</h2>'
         '<p>Big type on one US Letter page: the five steps, the free tier, and how to cancel. Enter your email in the form above.</p>'
@@ -132,6 +133,7 @@ Submitting does not schedule an email and does not store the tool, trial start, 
 The Beehiiv embed below is the same signup as the weekly guide (beehiiv_embed.txt). That published form only accepts an email address, so tool and dates cannot be posted with it.
 When a backend exists, save email, tool, trial start, and reminder date, and send the reminder on that date.
 -->
+<h2>{GIFT}</h2>
 <div data-beehiiv>{EMBED}</div>
 <p style="font-size:16px">Form not showing? <a href="https://stepshotai.beehiiv.com/subscribe">Subscribe here</a>.</p>
 <script>
@@ -250,6 +252,11 @@ w("scores.html",page("Scoring",f"""<h1>How we score</h1><table><tr><th>Measure</
 <tr><td>Easy to forget subscription</td><td>Annual prepay, bundles, app-store billing, and whether official help shows a clear cancel path.</td></tr></table>
 <p class=note>If we haven't tested something, we say “not yet scored” instead of guessing. Each card links its source and last-checked date.</p>"""))
 w("changes.html",page("What changed",f"""<h1>What changed</h1><p>Before/after picture cards when an AI tool moves a button or changes a plan.</p><div class=card><span class="tag soon">Coming soon</span><p>No entries yet. Tracking starts with ChatGPT, Claude and Gemini. Baseline: {D}.</p></div>"""))
+w("thanks.html",page("You're in!","""<h1>You're in! Here's your free AI Cheat Sheet</h1>
+<div class=card style="text-align:center"><p>Your AI Cheat Sheet for ADHD Brains is ready. Save it, print it, stick it on the fridge.</p>
+<p><a class="btn c0" style="font-size:24px;padding:16px 32px;display:inline-block" href="free/ai-cheat-sheet-adhd.pdf" download>⬇ Download the AI Cheat Sheet (PDF)</a></p>
+<p class=note>Look for a new picture guide in your inbox every week.</p></div>
+<h2>Start with a picture guide</h2><div class=card><p>"""+" · ".join(f'<a href="guides/{k}.html">{html.escape(TOOLS[k]["n"])}</a>' for k in GUIDES)+"""</p><p><a href="index.html">See all guides</a></p></div>"""))
 w("disclosure.html",page("Affiliate disclosure","""<h1>Affiliate disclosure</h1><p>StepShot AI may earn a commission when you sign up for a tool through some of our links, at no extra cost to you. Affiliate links will always be labeled. Commissions never change our scores, and we may write guides for tools that pay us nothing.</p><p class=note>Right now this site has no affiliate links.</p>"""))
 # "Should I pay?" — verdicts use only TOOLS fields already on the score cards:
 #   fs (exact free-tier label), the ss prefix (High / Medium-high / Medium risk),
